@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Chat</title>
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" 
+        integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" 
+        crossorigin="anonymous">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <style>
+            body {
+                margin: 20px;
+            }
+
+            #messageArea {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="row" id="userFormArea">
+                <h3>Usuario:</h3>        
+                <form id="userForm">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="username" placeholder="Informe seu nome">
+                            <span class="input-group-btn">
+                                <input class="btn btn-default" type="submit">
+                            </span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="container">
+                <div class="row" id="messageArea">
+                    <h3>Mensagem</h3>
+                    <ul class="list-group" id="users"></ul>    
+                    <ul class="list-group" id="chat"></ul>
+                    <form id="messageForm">
+                        <div class="form-group">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="message" placeholder="escreva a mensagem">
+                                <span class="input-group-btn">
+                                    <input class="btn btn-default" type="submit">
+                                </span>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+    </body>
+    <script>
+        $(function(){
+            var socket = io.connect();
+            var $messageArea = $('#messageArea');
+            var $chat = $('#chat');
+            var $messageForm = $('#messageForm');
+            var $message = $('#message');
+            
+            var $userFormArea = $('#userFormArea');
+            var $users = $('#users');
+            var $userForm = $('#userForm');
+            var $username = $('#username');
+
+            $messageForm.submit(function(e){
+                // replace para remover as tags do html, caso contrario envia o $message
+                var message = $message.val().replace(/(<([^>]+)>)/ig,'');                
+                e.preventDefault();
+                
+                // emitindo mensagem para o servidor
+                socket.emit('Send message', message);
+                $message.val('');
+            });
+
+            socket.on('new message', function(data){
+                $chat.append('<li class="list-group-item list-group-item-info"><b>'+data.username+'</b>: '+data.message+'</li>');
+            });
+
+            $userForm.submit(function(e){                
+                var username = $username.val().replace(/(<([^>]+)>)/ig,'');                
+                e.preventDefault();
+                
+                socket.emit('new user', username, function(data){
+                    $userFormArea.hide();
+                    $messageArea.show();
+                });
+                $username.val('');
+            });
+
+            socket.on('get users', function(data){
+                var html = '';
+                for (let index = 0; index < data.length; index++) 
+                    html += '<li class="list-group-item list-group-item-success">'+data[index]+'</li>';
+
+                $users.html(html);               
+            });
+        });
+    </script>
+</html>
